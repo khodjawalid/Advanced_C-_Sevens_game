@@ -6,6 +6,28 @@
 
 namespace sevens {
 
+
+void printTable(const std::unordered_map<uint64_t, std::unordered_map<uint64_t, bool>>& table) {
+    static const char* suits[] = {"♣", "♦", "♥", "♠"};
+    std::cout << "\nÉtat de la table :\n";
+
+    for (int suit = 0; suit < 4; ++suit) {
+        std::cout << suits[suit] << " : ";
+        for (int rank = 1; rank <= 13; ++rank) {
+            auto itSuit = table.find(suit);
+            if (itSuit != table.end() && itSuit->second.count(rank)) {
+                static const char* ranks[] = {"", "A", "2", "3", "4", "5", "6", "7",
+                                                "8", "9", "10", "J", "Q", "K"};
+                std::cout << ranks[rank] << suits[suit] << " ";
+            } else {
+                std::cout << "-- ";
+            }
+        }
+        std::cout << "\n";
+    }
+}
+
+
 void printCard(const sevens::Card& card) {
     static const char* suits[] = {"♣", "♦", "♥", "♠"};
     static const char* ranks[] = {"", "A", "2", "3", "4", "5", "6", "7",
@@ -70,11 +92,24 @@ MyGameMapper::compute_game_progress(uint64_t numPlayers)
 
     std::cout << "\n--- Début du jeu ---\n";
 
-    int passesInARow = 0;  // compteur de passes consécutives
-    const int maxPassesBeforeBreak = static_cast<int>(numPlayers) * 5;
+    int passesInARow = 0;
+const int maxPassesBeforeBreak = static_cast<int>(numPlayers) * 5;
 
-    while (!someoneFinished) {
-        uint64_t currentPlayer = turn % numPlayers;
+while (!someoneFinished) {
+    std::cout << "\n===== Tour " << (turn + 1) << " =====\n";
+
+    // Affichage des mains de tous les joueurs
+    for (uint64_t pid = 0; pid < numPlayers; ++pid) {
+        std::cout << "Main de Joueur " << pid << " : ";
+        for (const auto& c : playerHands_[pid]) {
+            printCard(c);
+            std::cout << " ";
+        }
+        std::cout << "\n";
+    }
+
+    // Chaque joueur joue à son tour
+    for (uint64_t currentPlayer = 0; currentPlayer < numPlayers; ++currentPlayer) {
         auto& strategy = strategies_[currentPlayer];
         auto& hand = playerHands_[currentPlayer];
 
@@ -86,10 +121,10 @@ MyGameMapper::compute_game_progress(uint64_t numPlayers)
                     index = proposed;
                 }
             }
-            break; // n'appelle pas la stratégie en boucle, juste une fois
+            break; // une seule tentative
         }
 
-        std::cout << "Tour " << turn + 1 << " - Joueur " << currentPlayer << " : ";
+        std::cout << "Joueur " << currentPlayer << " : ";
 
         if (index >= 0 && static_cast<size_t>(index) < hand.size()) {
             Card card = hand[index];
@@ -105,7 +140,7 @@ MyGameMapper::compute_game_progress(uint64_t numPlayers)
             }
 
             hand.erase(hand.begin() + index);
-            passesInARow = 0;  // réinitialiser le compteur si une carte est jouée
+            passesInARow = 0;
         } else {
             std::cout << "passe\n";
 
@@ -118,27 +153,24 @@ MyGameMapper::compute_game_progress(uint64_t numPlayers)
             passesInARow++;
         }
 
-        // Affichage de la main restante
-        std::cout << "Main de Joueur " << currentPlayer << " : ";
-        for (const auto& c : hand) {
-            printCard(c);
-            std::cout << " ";
-        }
-        std::cout << "\n";
-
-        // Vérifier victoire
+        // Si un joueur a gagné
         if (hand.empty()) {
             someoneFinished = true;
-        }
-
-        // Sécurité : jeu bloqué
-        if (passesInARow >= maxPassesBeforeBreak) {
-            std::cout << "💥 Jeu bloqué : tous les joueurs passent en boucle. Fin forcée.\n";
             break;
         }
-
-        ++turn;
     }
+
+    printTable(tableLayout_);
+    // Boucle infinie de passes ?
+    if (passesInARow >= maxPassesBeforeBreak) {
+        std::cout << "💥 Jeu bloqué : tous les joueurs passent en boucle. Fin forcée.\n";
+        break;
+    }
+
+    
+    ++turn;
+    } 
+
 
 
     std::cout << "\n--- Résultats finaux détaillés ---\n";
