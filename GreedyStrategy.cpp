@@ -13,17 +13,39 @@ int GreedyStrategy::selectCardToPlay(
     const std::vector<Card>& hand,
     const std::unordered_map<uint64_t, std::unordered_map<uint64_t, bool>>& tableLayout)
 {
-    // A trivial "greedy" approach:
-    // 1. If the hand is empty, pass (-1).
-    // 2. Otherwise, just pick the first card in the hand. 
-    //    (We do not check adjacency or any scoring.)
+    int bestIndex = -1;
+    int bestValue = -1;  // plus grand = mieux
 
-    if (hand.empty()) {
-        return -1; // pass
+    for (size_t i = 0; i < hand.size(); ++i) {
+        const Card& card = hand[i];
+
+        // Vérifie si la carte est jouable (adjacente à une carte déjà posée)
+        auto it = tableLayout.find(card.suit);
+        if (it != tableLayout.end()) {
+            const auto& suitLayout = it->second;
+            uint64_t value = card.rank;
+
+            // Peut-on jouer cette carte ?
+            bool isPlayable = false;
+            if (value == 7) {
+                isPlayable = true; // Les 7 sont toujours jouables
+            } else if (value > 7) {
+                isPlayable = suitLayout.count(value - 1); // carte précédente existe
+            } else { // value < 7
+                isPlayable = suitLayout.count(value + 1); // carte suivante existe
+            }
+
+            // Si jouable et de meilleure valeur, on la sélectionne
+            if (isPlayable && static_cast<int>(value) > bestValue) {
+                bestValue = value;
+                bestIndex = static_cast<int>(i);
+            }
+        }
     }
-    
-    return 0; // Always choose the first card in the hand
+
+    return bestIndex; // -1 = passe si aucune carte jouable
 }
+
 
 void GreedyStrategy::observeMove(uint64_t /*playerID*/, const Card& /*playedCard*/) {
     // Ignored in minimal version
@@ -35,6 +57,10 @@ void GreedyStrategy::observePass(uint64_t /*playerID*/) {
 
 std::string GreedyStrategy::getName() const {
     return "GreedyStrategy";
+}
+
+extern "C" PlayerStrategy* createStrategy() {
+    return new sevens::GreedyStrategy();
 }
 
 } // namespace sevens

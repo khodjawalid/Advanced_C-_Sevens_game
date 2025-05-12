@@ -50,4 +50,8 @@ std::string RandomStrategy::getName() const {
     return "RandomStrategy";
 }
 
+extern "C" PlayerStrategy* createStrategy() {
+    return new RandomStrategy();
+}
+
 } // namespace sevens

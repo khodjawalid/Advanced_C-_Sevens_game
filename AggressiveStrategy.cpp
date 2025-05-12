@@ -23,13 +23,12 @@ public:
     }
 
     int selectCardToPlay(
-        const std::vector<Card>& hand,
-        const std::unordered_map<uint64_t, std::unordered_map<uint64_t, bool>>& tableLayout) override 
+    const std::vector<Card>& hand,
+    const std::unordered_map<uint64_t, std::unordered_map<uint64_t, bool>>& tableLayout) override 
     {
         int bestIndex = -1;
         uint64_t bestRank = 0;
         bool foundPlayable = false;
-
 
         for (size_t i = 0; i < hand.size(); ++i) {
             const Card& card = hand[i];
@@ -38,13 +37,16 @@ public:
 
             bool canPlay = false;
 
+            auto itSuit = tableLayout.find(suit);
+
             if (rank == 7) {
                 canPlay = true;
-            } else {
-                if (rank > 1 && tableLayout.at(suit).count(rank - 1) && tableLayout.at(suit).at(rank - 1)) {
+            } else if (itSuit != tableLayout.end()) {
+                const auto& line = itSuit->second;
+                if (rank > 1 && line.count(rank - 1)) {
                     canPlay = true;
                 }
-                if (rank < 13 && tableLayout.at(suit).count(rank + 1) && tableLayout.at(suit).at(rank + 1)) {
+                if (rank < 13 && line.count(rank + 1)) {
                     canPlay = true;
                 }
             }
@@ -56,8 +58,9 @@ public:
             }
         }
 
-        return bestIndex; // -1 if no playable card
+        return bestIndex; // -1 si aucune carte jouable
     }
+
 
     void observeMove(uint64_t playerID, const Card& playedCard) override {
         // Extension possible : suivi des cartes jouées
