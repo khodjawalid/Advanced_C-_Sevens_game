@@ -1,66 +1,67 @@
-#include "GreedyStrategy.hpp"
+#include "PlayerStrategy.hpp"
+#include <vector>
+#include <string>
 #include <algorithm>
-#include <iostream>
 
 namespace sevens {
 
-void GreedyStrategy::initialize(uint64_t playerID) {
-    myID = playerID;
-    // No special initialization for this minimal version
-}
+class GreedyStrategy : public PlayerStrategy {
+public:
+    void initialize(uint64_t playerID) override {
+        myID = playerID;
+    }
 
-int GreedyStrategy::selectCardToPlay(
-    const std::vector<Card>& hand,
-    const std::unordered_map<uint64_t, std::unordered_map<uint64_t, bool>>& tableLayout)
-{
-    int bestIndex = -1;
-    int bestValue = -1;  // plus grand = mieux
+    int selectCardToPlay(
+        const std::vector<Card>& hand,
+        const std::unordered_map<uint64_t, std::unordered_map<uint64_t, bool>>& tableLayout) override
+    {
+        int bestIndex = -1;
+        int bestRank = -1;
 
-    for (size_t i = 0; i < hand.size(); ++i) {
-        const Card& card = hand[i];
+        for (size_t i = 0; i < hand.size(); ++i) {
+            const Card& card = hand[i];
+            int suit = card.suit;
+            int rank = card.rank;
 
-        // Vérifie si la carte est jouable (adjacente à une carte déjà posée)
-        auto it = tableLayout.find(card.suit);
-        if (it != tableLayout.end()) {
-            const auto& suitLayout = it->second;
-            uint64_t value = card.rank;
+            bool playable = false;
 
-            // Peut-on jouer cette carte ?
-            bool isPlayable = false;
-            if (value == 7) {
-                isPlayable = true; // Les 7 sont toujours jouables
-            } else if (value > 7) {
-                isPlayable = suitLayout.count(value - 1); // carte précédente existe
-            } else { // value < 7
-                isPlayable = suitLayout.count(value + 1); // carte suivante existe
+            if (rank == 7) {
+                playable = true;
+            } else {
+                auto itSuit = tableLayout.find(suit);
+                if (itSuit != tableLayout.end()) {
+                    const auto& suitCards = itSuit->second;
+                    if (rank > 1 && suitCards.count(rank - 1)) {
+                        playable = true;
+                    }
+                    if (rank < 13 && suitCards.count(rank + 1)) {
+                        playable = true;
+                    }
+                }
             }
 
-            // Si jouable et de meilleure valeur, on la sélectionne
-            if (isPlayable && static_cast<int>(value) > bestValue) {
-                bestValue = value;
+            if (playable && rank > bestRank) {
+                bestRank = rank;
                 bestIndex = static_cast<int>(i);
             }
         }
+
+        return bestIndex; // -1 si aucune carte jouable
     }
 
-    return bestIndex; // -1 = passe si aucune carte jouable
-}
+    void observeMove(uint64_t, const Card&) override {}
+    void observePass(uint64_t) override {}
 
+    std::string getName() const override {
+        return "GreedyStrategy";
+    }
 
-void GreedyStrategy::observeMove(uint64_t /*playerID*/, const Card& /*playedCard*/) {
-    // Ignored in minimal version
-}
-
-void GreedyStrategy::observePass(uint64_t /*playerID*/) {
-    // Ignored in minimal version
-}
-
-std::string GreedyStrategy::getName() const {
-    return "GreedyStrategy";
-}
+private:
+    uint64_t myID;
+};
 
 extern "C" PlayerStrategy* createStrategy() {
-    return new sevens::GreedyStrategy();
+    return new GreedyStrategy();
 }
 
 } // namespace sevens
